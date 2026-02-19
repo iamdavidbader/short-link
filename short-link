@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# short-link - manage short IDs for URLs
+# Usage:
+#   short-link add <url>
+#   short-link list
+#   short-link get <id>
+#   short-link update <id> <url>
+#   short-link delete <id>
+
+STORE_DIR="${SHORT_LINK_DIR:-$HOME/.short-links}"
+mkdir -p "$STORE_DIR"
+
+cmd="$1"
+
+gen_id() {
+  while true; do
+    id=$(cat /dev/urandom | tr -dc 'a-z0-9' | head -c 4)
+    [[ ! -f "$STORE_DIR/$id" ]] && echo "$id" && return
+  done
+}
+
+case "$cmd" in
+  add)
+    [[ -z "$2" ]] && echo "Usage: short-link add <url>" >&2 && exit 1
+    id=$(gen_id)
+    echo "$2" > "$STORE_DIR/$id"
+    echo "$id"
+    ;;
+
+  list)
+    for f in "$STORE_DIR"/????; do
+      [[ -f "$f" ]] && printf "%s\t%s\n" "$(basename "$f")" "$(cat "$f")"
+    done
+    ;;
+
+  get)
+    [[ -z "$2" ]] && echo "Usage: short-link get <id>" >&2 && exit 1
+    [[ ! -f "$STORE_DIR/$2" ]] && echo "Not found: $2" >&2 && exit 1
+    cat "$STORE_DIR/$2"
+    ;;
+
+  update)
+    [[ -z "$2" || -z "$3" ]] && echo "Usage: short-link update <id> <url>" >&2 && exit 1
+    [[ ! -f "$STORE_DIR/$2" ]] && echo "Not found: $2" >&2 && exit 1
+    echo "$3" > "$STORE_DIR/$2"
+    echo "$2"
+    ;;
+
+  delete)
+    [[ -z "$2" ]] && echo "Usage: short-link delete <id>" >&2 && exit 1
+    [[ ! -f "$STORE_DIR/$2" ]] && echo "Not found: $2" >&2 && exit 1
+    rm "$STORE_DIR/$2"
+    echo "$2"
+    ;;
+
+  *)
+    echo "Usage: short-link <add|list|get|update|delete> [args]" >&2
+    exit 1
+    ;;
+esac
